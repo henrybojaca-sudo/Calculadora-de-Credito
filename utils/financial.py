@@ -480,7 +480,13 @@ def plan_ahorro_meses_para_meta(
 
 def fmt_currency(value, prefix="$") -> str:
     try:
-        return f"{prefix} {float(value):,.2f}"
+        # Formato colombiano: punto como separador de miles, coma como decimal
+        # Ej: $ 100.000,00
+        formatted = f"{float(value):,.2f}"          # "100,000.00"
+        formatted = formatted.replace(",", "X")      # "100X000.00"
+        formatted = formatted.replace(".", ",")      # "100X000,00"
+        formatted = formatted.replace("X", ".")      # "100.000,00"
+        return f"{prefix} {formatted}"
     except (ValueError, TypeError):
         return str(value)
 

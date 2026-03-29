@@ -91,15 +91,24 @@ def result_box(label: str, value: str):
     </div>""", unsafe_allow_html=True)
 
 
+def _fmt_num_col(x) -> str:
+    """Formato colombiano: $ 100.000,00"""
+    if not (isinstance(x, (int, float)) and not isinstance(x, bool)):
+        return x
+    s = f"{float(x):,.2f}"        # "100,000.00"
+    s = s.replace(",", "X")       # "100X000.00"
+    s = s.replace(".", ",")       # "100X000,00"
+    s = s.replace("X", ".")       # "100.000,00"
+    return f"$ {s}"
+
+
 def fmt_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Formatea columnas numéricas de un dataframe."""
+    """Formatea columnas numéricas de un dataframe con formato colombiano."""
     df2 = df.copy()
     for col in df2.columns:
         if col == "Período":
             continue
-        df2[col] = df2[col].apply(
-            lambda x: f"${float(x):,.2f}" if isinstance(x, (int, float)) and not isinstance(x, bool) else x
-        )
+        df2[col] = df2[col].apply(_fmt_num_col)
     return df2
 
 
@@ -257,7 +266,11 @@ if modulo == "💰 Plan de Ahorro":
 
         st.markdown("")
         col_r1, col_r2, col_r3 = st.columns(3)
-        col_r1.metric("Rendimiento sobre aportes", f"{(total_intereses/total_aportado*100) if total_aportado>0 else 0:.2f}%")
+        col_r1.metric(
+            "Tasa efectiva anual",
+            f"{tasa_efectiva_anual*100:.4f}%",
+            help="Tasa efectiva anual equivalente a la tasa periódica aplicada"
+        )
         col_r2.metric("Tasa periódica aplicada", f"{tasa_periodica*100:.4f}%")
         col_r3.metric("Plazo total", f"{plazo_anios} años / {plazo_meses} períodos")
 
