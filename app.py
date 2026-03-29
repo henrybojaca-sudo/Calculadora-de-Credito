@@ -229,17 +229,22 @@ if modulo == "💰 Plan de Ahorro":
     # ── Parámetros del plan ────────────────────────────────────────────
     st.subheader("2. Parámetros del Plan")
     col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-    ahorro_inicial = col_p1.number_input(
-        "Ahorro Inicial", min_value=0.0, value=0.0, step=100_000.0,
-        help="Saldo inicial antes de empezar a ahorrar"
-    )
-    cuota_ahorro = col_p2.number_input(
-        "Cuota periódica", min_value=0.0, value=100_000.0, step=10_000.0,
-        help="Monto que depositas cada período"
-    )
-    plazo_anios = col_p3.number_input(
-        "Plazo (años)", min_value=1, value=18, step=1
-    )
+    with col_p1:
+        ahorro_inicial = st.number_input(
+            "Ahorro Inicial", min_value=0.0, value=0.0, step=100_000.0,
+            help="Saldo inicial antes de empezar a ahorrar"
+        )
+        st.caption(fmt_currency(ahorro_inicial, moneda))
+    with col_p2:
+        cuota_ahorro = st.number_input(
+            "Cuota periódica", min_value=0.0, value=100_000.0, step=10_000.0,
+            help="Monto que depositas cada período"
+        )
+        st.caption(fmt_currency(cuota_ahorro, moneda))
+    with col_p3:
+        plazo_anios = st.number_input(
+            "Plazo (años)", min_value=1, value=18, step=1
+        )
     plazo_meses = plazo_anios * m
     col_p4.metric("Total períodos", plazo_meses)
     col_p4.metric("Plazo en meses", plazo_anios * 12)
