@@ -257,7 +257,11 @@ if modulo == "💰 Plan de Ahorro":
 
         st.markdown("")
         col_r1, col_r2, col_r3 = st.columns(3)
-        col_r1.metric("Rendimiento sobre aportes", f"{(total_intereses/total_aportado*100) if total_aportado>0 else 0:.2f}%")
+        col_r1.metric(
+            "Tasa efectiva anual",
+            f"{tasa_efectiva_anual*100:.4f}%",
+            help="Tasa efectiva anual equivalente a la tasa periódica aplicada"
+        )
         col_r2.metric("Tasa periódica aplicada", f"{tasa_periodica*100:.4f}%")
         col_r3.metric("Plazo total", f"{plazo_anios} años / {plazo_meses} períodos")
 
