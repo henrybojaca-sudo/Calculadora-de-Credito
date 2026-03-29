@@ -91,15 +91,24 @@ def result_box(label: str, value: str):
     </div>""", unsafe_allow_html=True)
 
 
+def _fmt_num_col(x) -> str:
+    """Formato colombiano: $ 100.000,00"""
+    if not (isinstance(x, (int, float)) and not isinstance(x, bool)):
+        return x
+    s = f"{float(x):,.2f}"        # "100,000.00"
+    s = s.replace(",", "X")       # "100X000.00"
+    s = s.replace(".", ",")       # "100X000,00"
+    s = s.replace("X", ".")       # "100.000,00"
+    return f"$ {s}"
+
+
 def fmt_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Formatea columnas numéricas de un dataframe."""
+    """Formatea columnas numéricas de un dataframe con formato colombiano."""
     df2 = df.copy()
     for col in df2.columns:
         if col == "Período":
             continue
-        df2[col] = df2[col].apply(
-            lambda x: f"${float(x):,.2f}" if isinstance(x, (int, float)) and not isinstance(x, bool) else x
-        )
+        df2[col] = df2[col].apply(_fmt_num_col)
     return df2
 
 
