@@ -2,7 +2,7 @@
 Módulo de cálculos de Matemática Financiera
 Cubre: Interés Simple, Interés Compuesto, Anualidades, Gradientes,
        Amortización (Francés, Alemán, Americano), Conversión de Tasas,
-       VPN/TIR
+       VPN/TIR, Plan de Ahorro
 """
 
 import numpy as np
@@ -358,6 +358,120 @@ def tabla_vpn_sensibilidad(flujos: list, tasa_min: float, tasa_max: float, pasos
     tasas = np.linspace(tasa_min, tasa_max, pasos)
     rows = [{"Tasa (%)": round(t * 100, 2), "VPN": calcular_vpn(t, flujos)} for t in tasas]
     return pd.DataFrame(rows)
+
+
+# ─────────────────────────────────────────────
+# PLAN DE AHORRO
+# ─────────────────────────────────────────────
+
+def plan_ahorro_tabla(
+    ahorro_inicial: float,
+    cuota: float,
+    tasa: float,
+    n_meses: int,
+    ahorros_extra: Optional[dict] = None,
+) -> pd.DataFrame:
+    """
+    Genera la tabla de un plan de ahorro con cuotas periódicas.
+
+    Lógica (replica el Excel de Matemática Financiera):
+        intereses_t = (VF_{t-1} + cuota_t + extra_t) × tasa   [excepto último período]
+        VF_t        = VF_{t-1} + cuota_t + extra_t + intereses_t
+
+    Parámetros:
+        ahorro_inicial : saldo acumulado al inicio (período 0)
+        cuota          : depósito fijo por período
+        tasa           : tasa efectiva periódica (decimal)
+        n_meses        : número de períodos
+        ahorros_extra  : dict {período: monto_extra}; si None todos son 0
+    """
+    if ahorros_extra is None:
+        ahorros_extra = {}
+
+    rows = []
+    # Período 0
+    rows.append({
+        "Período": 0,
+        "Cuota": 0.0,
+        "Intereses": 0.0,
+        "Ahorro Extra": 0.0,
+        "Valor Final": ahorro_inicial,
+    })
+
+    vf = ahorro_inicial
+    for t in range(1, n_meses + 1):
+        extra = ahorros_extra.get(t, 0.0)
+        # Último período no genera intereses (fiel al Excel original)
+        if t == n_meses:
+            interes = 0.0
+        else:
+            interes = (vf + cuota + extra) * tasa
+        vf_nuevo = vf + cuota + extra + interes
+        rows.append({
+            "Período": t,
+            "Cuota": cuota,
+            "Intereses": interes,
+            "Ahorro Extra": extra,
+            "Valor Final": vf_nuevo,
+        })
+        vf = vf_nuevo
+
+    return pd.DataFrame(rows)
+
+
+def plan_ahorro_vf(
+    ahorro_inicial: float,
+    cuota: float,
+    tasa: float,
+    n_meses: int,
+) -> float:
+    """Valor Final de un plan de ahorro (sin ahorros extra)."""
+    df = plan_ahorro_tabla(ahorro_inicial, cuota, tasa, n_meses)
+    return df.iloc[-1]["Valor Final"]
+
+
+def plan_ahorro_cuota_para_meta(
+    meta: float,
+    ahorro_inicial: float,
+    tasa: float,
+    n_meses: int,
+    precision: float = 0.01,
+) -> float:
+    """
+    Calcula la cuota periódica necesaria para alcanzar una meta de ahorro.
+    Usa búsqueda binaria.
+    """
+    lo, hi = 0.0, meta
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        vf = plan_ahorro_vf(ahorro_inicial, mid, tasa, n_meses)
+        if vf < meta:
+            lo = mid
+        else:
+            hi = mid
+        if abs(hi - lo) < precision:
+            break
+    return (lo + hi) / 2
+
+
+def plan_ahorro_meses_para_meta(
+    meta: float,
+    ahorro_inicial: float,
+    cuota: float,
+    tasa: float,
+    max_periodos: int = 1200,
+) -> Optional[int]:
+    """
+    Calcula cuántos períodos se necesitan para alcanzar una meta de ahorro.
+    Retorna None si no es alcanzable en max_periodos.
+    """
+    vf = ahorro_inicial
+    for t in range(1, max_periodos + 1):
+        interes = (vf + cuota) * tasa
+        vf = vf + cuota + interes
+        if vf >= meta:
+            return t
+    return None
 
 
 # ─────────────────────────────────────────────

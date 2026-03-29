@@ -31,6 +31,9 @@ from utils.financial import (
     amortizacion_frances, amortizacion_aleman, amortizacion_americano,
     # VPN / TIR
     calcular_vpn, calcular_tir, tabla_vpn_sensibilidad,
+    # Plan de Ahorro
+    plan_ahorro_tabla, plan_ahorro_vf,
+    plan_ahorro_cuota_para_meta, plan_ahorro_meses_para_meta,
     # Formato
     fmt_currency, fmt_percent,
 )
@@ -122,6 +125,7 @@ with st.sidebar:
     modulo = st.radio(
         "Módulo",
         [
+            "💰 Plan de Ahorro",
             "🔄 Conversión de Tasas",
             "📈 Interés Simple",
             "📊 Interés Compuesto",
@@ -138,10 +142,263 @@ with st.sidebar:
 
 
 # ─────────────────────────────────────────────
+# MÓDULO 0: PLAN DE AHORRO
+# ─────────────────────────────────────────────
+
+if modulo == "💰 Plan de Ahorro":
+    st.title("💰 Plan de Ahorro — Simulador de Inversión Periódica")
+
+    # ── Configuración de tasa ──────────────────────────────────────────
+    st.subheader("1. Configuración de Tasas")
+    col_m1, col_m2 = st.columns([1, 2])
+    with col_m1:
+        metodo = st.selectbox(
+            "Método de ingreso",
+            ["Tasa Periódica", "Tasa Nominal Anual", "Tasa Efectiva Anual"],
+        )
+
+    col_t1, col_t2, col_t3 = st.columns(3)
+
+    if metodo == "Tasa Periódica":
+        with col_t1:
+            tasa_per_pct = st.number_input(
+                "Tasa Periódica (%)", min_value=0.001, value=1.0, step=0.01, format="%.3f"
+            )
+        tasa_periodica = tasa_per_pct / 100
+        per_pago = st.selectbox(
+            "Período de pago",
+            ["Mensual", "Bimestral", "Trimestral", "Semestral", "Anual"],
+            index=0,
+        )
+        m_map = {"Mensual": 12, "Bimestral": 6, "Trimestral": 4, "Semestral": 2, "Anual": 1}
+        m = m_map[per_pago]
+        tasa_nominal = tasa_periodica * m
+        tasa_efectiva_anual = (1 + tasa_periodica) ** m - 1
+
+    elif metodo == "Tasa Nominal Anual":
+        with col_t1:
+            tasa_nom_pct = st.number_input(
+                "Tasa Nominal Anual (%)", min_value=0.001, value=12.0, step=0.1
+            )
+        per_pago = st.selectbox(
+            "Período de pago / capitalización",
+            ["Mensual", "Bimestral", "Trimestral", "Semestral", "Anual"],
+            index=0,
+        )
+        m_map = {"Mensual": 12, "Bimestral": 6, "Trimestral": 4, "Semestral": 2, "Anual": 1}
+        m = m_map[per_pago]
+        tasa_nominal = tasa_nom_pct / 100
+        tasa_periodica = tasa_nominal / m
+        tasa_efectiva_anual = (1 + tasa_periodica) ** m - 1
+
+    else:  # Tasa Efectiva Anual
+        with col_t1:
+            tea_pct = st.number_input(
+                "Tasa Efectiva Anual (%)", min_value=0.001, value=12.68, step=0.1
+            )
+        per_pago = st.selectbox(
+            "Período de pago",
+            ["Mensual", "Bimestral", "Trimestral", "Semestral", "Anual"],
+            index=0,
+        )
+        m_map = {"Mensual": 12, "Bimestral": 6, "Trimestral": 4, "Semestral": 2, "Anual": 1}
+        m = m_map[per_pago]
+        tasa_efectiva_anual = tea_pct / 100
+        tasa_periodica = (1 + tasa_efectiva_anual) ** (1 / m) - 1
+        tasa_nominal = tasa_periodica * m
+
+    # Mostrar resumen de tasas
+    with col_t2:
+        st.metric("Tasa Periódica", f"{tasa_periodica*100:.4f}%")
+        st.metric("Tasa Nominal Anual", f"{tasa_nominal*100:.4f}%")
+    with col_t3:
+        st.metric("Tasa Efectiva Anual", f"{tasa_efectiva_anual*100:.4f}%")
+        st.metric("Períodos por año", m)
+
+    st.divider()
+
+    # ── Parámetros del plan ────────────────────────────────────────────
+    st.subheader("2. Parámetros del Plan")
+    col_p1, col_p2, col_p3, col_p4 = st.columns(4)
+    ahorro_inicial = col_p1.number_input(
+        "Ahorro Inicial", min_value=0.0, value=0.0, step=100_000.0,
+        help="Saldo inicial antes de empezar a ahorrar"
+    )
+    cuota_ahorro = col_p2.number_input(
+        "Cuota periódica", min_value=0.0, value=100_000.0, step=10_000.0,
+        help="Monto que depositas cada período"
+    )
+    plazo_anios = col_p3.number_input(
+        "Plazo (años)", min_value=1, value=18, step=1
+    )
+    plazo_meses = plazo_anios * m
+    col_p4.metric("Total períodos", plazo_meses)
+    col_p4.metric("Plazo en meses", plazo_anios * 12)
+
+    # ── Pestañas ──────────────────────────────────────────────────────
+    tab_res, tab_tabla, tab_graf, tab_meta = st.tabs(
+        ["Resultados", "Tabla de Ahorro", "Gráfica", "Calculadora de Metas"]
+    )
+
+    # Generar tabla
+    df_ahorro = plan_ahorro_tabla(ahorro_inicial, cuota_ahorro, tasa_periodica, plazo_meses)
+    vf_final = df_ahorro.iloc[-1]["Valor Final"]
+    total_aportado = ahorro_inicial + cuota_ahorro * plazo_meses
+    total_intereses = vf_final - total_aportado
+
+    with tab_res:
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            metric_card("Valor Final Acumulado", fmt_currency(vf_final, moneda))
+        with c2:
+            metric_card("Total Aportado", fmt_currency(total_aportado, moneda))
+        with c3:
+            metric_card("Total Intereses Ganados", fmt_currency(total_intereses, moneda))
+
+        st.markdown("")
+        col_r1, col_r2, col_r3 = st.columns(3)
+        col_r1.metric("Rendimiento sobre aportes", f"{(total_intereses/total_aportado*100) if total_aportado>0 else 0:.2f}%")
+        col_r2.metric("Tasa periódica aplicada", f"{tasa_periodica*100:.4f}%")
+        col_r3.metric("Plazo total", f"{plazo_anios} años / {plazo_meses} períodos")
+
+        # Mini tabla anual
+        st.markdown("#### Resumen Anual")
+        if m == 12:
+            anios_rows = []
+            for anio in range(1, plazo_anios + 1):
+                idx = anio * 12
+                if idx <= len(df_ahorro) - 1:
+                    row = df_ahorro.iloc[idx]
+                    anios_rows.append({
+                        "Año": anio,
+                        "Período": int(row["Período"]),
+                        "Valor Acumulado": row["Valor Final"],
+                        "Intereses Acumulados": df_ahorro.iloc[:idx+1]["Intereses"].sum(),
+                        "Total Aportado": ahorro_inicial + cuota_ahorro * idx,
+                    })
+            df_anual = pd.DataFrame(anios_rows)
+            st.dataframe(fmt_df(df_anual), use_container_width=True, hide_index=True)
+        else:
+            st.info("El resumen anual está disponible para planes mensuales.")
+
+    with tab_tabla:
+        st.markdown(f"**Tabla completa — {plazo_meses} períodos**")
+        # Mostrar con paginación para tablas largas
+        if plazo_meses > 100:
+            mostrar_todos = st.checkbox("Mostrar todos los períodos", value=False)
+            if mostrar_todos:
+                st.dataframe(fmt_df(df_ahorro), use_container_width=True, hide_index=True)
+            else:
+                periodos_muestra = st.slider("Rango de períodos a mostrar", 0, plazo_meses, (0, min(24, plazo_meses)))
+                df_slice = df_ahorro[
+                    (df_ahorro["Período"] >= periodos_muestra[0]) &
+                    (df_ahorro["Período"] <= periodos_muestra[1])
+                ]
+                st.dataframe(fmt_df(df_slice), use_container_width=True, hide_index=True)
+        else:
+            st.dataframe(fmt_df(df_ahorro), use_container_width=True, hide_index=True)
+
+        csv_ahorro = df_ahorro.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Descargar tabla CSV", csv_ahorro, "plan_ahorro.csv", "text/csv")
+
+    with tab_graf:
+        col_g1, col_g2 = st.columns(2)
+
+        with col_g1:
+            # Evolución del valor acumulado
+            fig1 = go.Figure()
+            fig1.add_trace(go.Scatter(
+                x=df_ahorro["Período"], y=df_ahorro["Valor Final"],
+                name="Valor Acumulado", fill="tozeroy",
+                line=dict(color="#4f46e5"), fillcolor="rgba(79,70,229,0.15)"
+            ))
+            # Línea de aportes sin interés
+            aportes_sin_int = [ahorro_inicial + cuota_ahorro * t for t in range(plazo_meses + 1)]
+            fig1.add_trace(go.Scatter(
+                x=list(range(plazo_meses + 1)), y=aportes_sin_int,
+                name="Solo aportes (sin interés)", line=dict(color="#f59e0b", dash="dash")
+            ))
+            fig1.update_layout(
+                title="Crecimiento del Ahorro",
+                xaxis_title="Período",
+                yaxis_title="Valor",
+                legend=dict(orientation="h", y=-0.2),
+            )
+            st.plotly_chart(fig1, use_container_width=True)
+
+        with col_g2:
+            # Composición final: aportes vs intereses
+            fig2 = go.Figure(go.Pie(
+                labels=["Aportes", "Intereses Ganados"],
+                values=[max(total_aportado, 0), max(total_intereses, 0)],
+                hole=0.4,
+                marker_colors=["#4f46e5", "#22c55e"],
+            ))
+            fig2.update_layout(title="Composición del Valor Final")
+            st.plotly_chart(fig2, use_container_width=True)
+
+        # Intereses por período
+        fig3 = px.bar(
+            df_ahorro[df_ahorro["Período"] > 0],
+            x="Período", y="Intereses",
+            title="Intereses Generados por Período",
+            color_discrete_sequence=["#22c55e"],
+        )
+        st.plotly_chart(fig3, use_container_width=True)
+
+    with tab_meta:
+        st.subheader("¿Cuánto necesito ahorrar para llegar a mi meta?")
+        tipo_meta = st.radio(
+            "Calcular",
+            ["Cuota necesaria para una meta", "Tiempo para alcanzar una meta"],
+            horizontal=True,
+        )
+
+        if tipo_meta == "Cuota necesaria para una meta":
+            col_m1, col_m2 = st.columns(2)
+            meta_val = col_m1.number_input(
+                "Meta de ahorro", min_value=1.0, value=100_000_000.0, step=1_000_000.0
+            )
+            meta_plazo = col_m2.number_input(
+                "En cuántos períodos", min_value=1, value=plazo_meses, step=1
+            )
+            meta_inicial = col_m2.number_input(
+                "Ahorro inicial", min_value=0.0, value=ahorro_inicial, step=100_000.0, key="meta_ini"
+            )
+            cuota_necesaria = plan_ahorro_cuota_para_meta(meta_val, meta_inicial, tasa_periodica, meta_plazo)
+            metric_card("Cuota periódica necesaria", fmt_currency(cuota_necesaria, moneda))
+            result_box("Total a aportar", fmt_currency(cuota_necesaria * meta_plazo + meta_inicial, moneda))
+            result_box("Intereses que generará", fmt_currency(meta_val - cuota_necesaria * meta_plazo - meta_inicial, moneda))
+
+        else:
+            col_m1, col_m2 = st.columns(2)
+            meta_val2 = col_m1.number_input(
+                "Meta de ahorro", min_value=1.0, value=100_000_000.0, step=1_000_000.0, key="meta_val2"
+            )
+            cuota_meta = col_m2.number_input(
+                "Cuota periódica que puedes aportar",
+                min_value=1.0, value=cuota_ahorro, step=10_000.0, key="cuota_meta"
+            )
+            meta_inicial2 = col_m2.number_input(
+                "Ahorro inicial", min_value=0.0, value=ahorro_inicial, step=100_000.0, key="meta_ini2"
+            )
+            periodos_necesarios = plan_ahorro_meses_para_meta(meta_val2, meta_inicial2, cuota_meta, tasa_periodica)
+            if periodos_necesarios:
+                anios_nec = periodos_necesarios // m
+                per_nec = periodos_necesarios % m
+                metric_card("Períodos necesarios", f"{periodos_necesarios}")
+                result_box("Equivale a", f"{anios_nec} año(s) y {per_nec} período(s)")
+                result_box("Total aportado al llegar a la meta",
+                           fmt_currency(meta_inicial2 + cuota_meta * periodos_necesarios, moneda))
+            else:
+                st.error("No es posible alcanzar esa meta con la cuota indicada en un plazo razonable.")
+
+
+# ─────────────────────────────────────────────
 # MÓDULO 1: CONVERSIÓN DE TASAS
 # ─────────────────────────────────────────────
 
-if modulo == "🔄 Conversión de Tasas":
+elif modulo == "🔄 Conversión de Tasas":
     st.title("🔄 Conversión de Tasas de Interés")
     tab1, tab2, tab3 = st.tabs(
         ["Nominal ↔ Efectiva", "Tasa Equivalente", "Tabla Comparativa"]
