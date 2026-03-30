@@ -89,7 +89,6 @@ st.markdown("""
     .streamlit-expanderContent { padding: 0.4rem !important; }
     /* Alertas compactas */
     [data-testid="stAlert"] { padding: 0.4rem 0.8rem !important; }
-</style>
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 0.6rem 1rem;
