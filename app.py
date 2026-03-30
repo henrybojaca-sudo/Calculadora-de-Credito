@@ -52,26 +52,61 @@ st.set_page_config(
 # CSS personalizado
 st.markdown("""
 <style>
+    /* ── Espaciado global compacto ── */
+    .block-container {
+        padding-top: 0.6rem !important;
+        padding-bottom: 0.5rem !important;
+        max-width: 100% !important;
+    }
+    /* Títulos más pequeños */
+    h1 { font-size: 1.25rem !important; margin-bottom: 0.3rem !important; color: #1e1b4b; }
+    h2 { font-size: 1.05rem !important; margin-bottom: 0.2rem !important; color: #312e81; }
+    h3 { font-size: 0.95rem !important; margin-bottom: 0.15rem !important; color: #312e81; }
+    /* Reducir espacio entre widgets */
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stVerticalBlock"] > div { gap: 0.2rem !important; }
+    div[data-testid="stHorizontalBlock"] { gap: 0.5rem !important; }
+    /* Inputs más compactos */
+    [data-testid="stNumberInput"], [data-testid="stSelectbox"],
+    [data-testid="stRadio"], [data-testid="stTextInput"] {
+        margin-bottom: 0 !important;
+    }
+    /* Métricas nativas compactas */
+    [data-testid="stMetric"] { padding: 0.2rem 0 !important; }
+    [data-testid="stMetricLabel"] { font-size: 0.72rem !important; }
+    [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
+    /* Caption compacto */
+    [data-testid="stCaptionContainer"] { margin-top: -0.4rem !important; font-size: 0.72rem !important; }
+    /* Sidebar compacta */
+    [data-testid="stSidebar"] { min-width: 200px !important; max-width: 220px !important; }
+    [data-testid="stSidebar"] h2 { font-size: 0.95rem !important; }
+    /* Tabs sin margen extra */
+    .stTabs [data-baseweb="tab-list"] { gap: 6px; margin-bottom: 0; }
+    .stTabs [data-baseweb="tab"] { border-radius: 6px 6px 0 0; padding: 4px 12px; font-size: 0.82rem; }
+    /* Divider compacto */
+    hr { margin: 0.3rem 0 !important; }
+    /* Reducir padding de expanders */
+    .streamlit-expanderContent { padding: 0.4rem !important; }
+    /* Alertas compactas */
+    [data-testid="stAlert"] { padding: 0.4rem 0.8rem !important; }
+</style>
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem 1.5rem;
-        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
         color: white;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
     }
-    .metric-card h3 { margin: 0; font-size: 0.9rem; opacity: 0.85; }
-    .metric-card h2 { margin: 0.2rem 0 0; font-size: 1.6rem; font-weight: 700; }
+    .metric-card h3 { margin: 0; font-size: 0.78rem; opacity: 0.85; }
+    .metric-card h2 { margin: 0.1rem 0 0; font-size: 1.25rem; font-weight: 700; }
     .result-box {
         background: #f0f4ff;
         border-left: 4px solid #4f46e5;
-        padding: 0.8rem 1.2rem;
-        border-radius: 0 8px 8px 0;
-        margin: 0.5rem 0;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0 6px 6px 0;
+        margin: 0.25rem 0;
+        font-size: 0.85rem;
     }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { border-radius: 6px 6px 0 0; }
-    h1 { color: #1e1b4b; }
-    h2, h3 { color: #312e81; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -163,99 +198,53 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 
 if modulo == "💰 Plan de Ahorro":
-    st.title("💰 Plan de Ahorro — Simulador de Inversión Periódica")
+    st.markdown("### 💰 Plan de Ahorro — Simulador de Inversión Periódica")
 
-    # ── Configuración de tasa ──────────────────────────────────────────
-    st.subheader("1. Configuración de Tasas")
-    col_m1, col_m2 = st.columns([1, 2])
-    with col_m1:
-        metodo = st.selectbox(
-            "Método de ingreso",
-            ["Tasa Periódica", "Tasa Nominal Anual", "Tasa Efectiva Anual"],
-        )
-
-    col_t1, col_t2, col_t3 = st.columns(3)
+    # ── Fila 1: tasas (todo en una línea) ─────────────────────────────
+    m_map = {"Mensual": 12, "Bimestral": 6, "Trimestral": 4, "Semestral": 2, "Anual": 1}
+    c1, c2, c3, c4, c5, c6 = st.columns([1.4, 1, 1.2, 1, 1, 1])
+    metodo = c1.selectbox("Método", ["Tasa Periódica", "Tasa Nominal Anual", "Tasa Efectiva Anual"], label_visibility="visible")
+    per_pago = c3.selectbox("Período de pago", list(m_map.keys()), index=0)
+    m = m_map[per_pago]
 
     if metodo == "Tasa Periódica":
-        with col_t1:
-            tasa_per_pct = st.number_input(
-                "Tasa Periódica (%)", min_value=0.001, value=1.0, step=0.01, format="%.3f"
-            )
+        tasa_per_pct = c2.number_input("Tasa Periódica (%)", min_value=0.001, value=1.0, step=0.01, format="%.3f")
         tasa_periodica = tasa_per_pct / 100
-        per_pago = st.selectbox(
-            "Período de pago",
-            ["Mensual", "Bimestral", "Trimestral", "Semestral", "Anual"],
-            index=0,
-        )
-        m_map = {"Mensual": 12, "Bimestral": 6, "Trimestral": 4, "Semestral": 2, "Anual": 1}
-        m = m_map[per_pago]
         tasa_nominal = tasa_periodica * m
         tasa_efectiva_anual = (1 + tasa_periodica) ** m - 1
-
     elif metodo == "Tasa Nominal Anual":
-        with col_t1:
-            tasa_nom_pct = st.number_input(
-                "Tasa Nominal Anual (%)", min_value=0.001, value=12.0, step=0.1
-            )
-        per_pago = st.selectbox(
-            "Período de pago / capitalización",
-            ["Mensual", "Bimestral", "Trimestral", "Semestral", "Anual"],
-            index=0,
-        )
-        m_map = {"Mensual": 12, "Bimestral": 6, "Trimestral": 4, "Semestral": 2, "Anual": 1}
-        m = m_map[per_pago]
+        tasa_nom_pct = c2.number_input("Tasa Nominal (%)", min_value=0.001, value=12.0, step=0.1)
         tasa_nominal = tasa_nom_pct / 100
         tasa_periodica = tasa_nominal / m
         tasa_efectiva_anual = (1 + tasa_periodica) ** m - 1
-
-    else:  # Tasa Efectiva Anual
-        with col_t1:
-            tea_pct = st.number_input(
-                "Tasa Efectiva Anual (%)", min_value=0.001, value=12.68, step=0.1
-            )
-        per_pago = st.selectbox(
-            "Período de pago",
-            ["Mensual", "Bimestral", "Trimestral", "Semestral", "Anual"],
-            index=0,
-        )
-        m_map = {"Mensual": 12, "Bimestral": 6, "Trimestral": 4, "Semestral": 2, "Anual": 1}
-        m = m_map[per_pago]
+    else:
+        tea_pct = c2.number_input("TEA (%)", min_value=0.001, value=12.68, step=0.1)
         tasa_efectiva_anual = tea_pct / 100
         tasa_periodica = (1 + tasa_efectiva_anual) ** (1 / m) - 1
         tasa_nominal = tasa_periodica * m
 
-    # Mostrar resumen de tasas
-    with col_t2:
-        st.metric("Tasa Periódica", f"{tasa_periodica*100:.4f}%")
-        st.metric("Tasa Nominal Anual", f"{tasa_nominal*100:.4f}%")
-    with col_t3:
-        st.metric("Tasa Efectiva Anual", f"{tasa_efectiva_anual*100:.4f}%")
-        st.metric("Períodos por año", m)
+    c4.metric("T. Periódica", f"{tasa_periodica*100:.4f}%")
+    c4.metric("T. Nominal", f"{tasa_nominal*100:.4f}%")
+    c5.metric("TEA", f"{tasa_efectiva_anual*100:.4f}%")
+    c5.metric("Períodos/año", m)
 
     st.divider()
 
-    # ── Parámetros del plan ────────────────────────────────────────────
-    st.subheader("2. Parámetros del Plan")
-    col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-    with col_p1:
-        ahorro_inicial = st.number_input(
-            "Ahorro Inicial", min_value=0.0, value=0.0, step=100_000.0,
-            help="Saldo inicial antes de empezar a ahorrar"
-        )
+    # ── Fila 2: parámetros del plan ───────────────────────────────────
+    p1, p2, p3, p4, p5 = st.columns([1.5, 1.5, 1, 1, 1])
+    with p1:
+        ahorro_inicial = st.number_input("Ahorro Inicial", min_value=0.0, value=0.0, step=100_000.0,
+                                         help="Saldo inicial antes de empezar a ahorrar")
         st.caption(fmt_currency(ahorro_inicial, moneda))
-    with col_p2:
-        cuota_ahorro = st.number_input(
-            "Cuota periódica", min_value=0.0, value=100_000.0, step=10_000.0,
-            help="Monto que depositas cada período"
-        )
+    with p2:
+        cuota_ahorro = st.number_input("Cuota periódica", min_value=0.0, value=100_000.0, step=10_000.0,
+                                       help="Monto que depositas cada período")
         st.caption(fmt_currency(cuota_ahorro, moneda))
-    with col_p3:
-        plazo_anios = st.number_input(
-            "Plazo (años)", min_value=1, value=18, step=1
-        )
+    with p3:
+        plazo_anios = st.number_input("Plazo (años)", min_value=1, value=18, step=1)
     plazo_meses = plazo_anios * m
-    col_p4.metric("Total períodos", plazo_meses)
-    col_p4.metric("Plazo en meses", plazo_anios * 12)
+    p4.metric("Total períodos", plazo_meses)
+    p5.metric("Plazo en meses", plazo_anios * 12)
 
     # ── Pestañas ──────────────────────────────────────────────────────
     tab_res, tab_tabla, tab_graf, tab_meta = st.tabs(
@@ -429,13 +418,12 @@ if modulo == "💰 Plan de Ahorro":
 # ─────────────────────────────────────────────
 
 elif modulo == "🔄 Conversión de Tasas":
-    st.title("🔄 Conversión de Tasas de Interés")
+    st.markdown("### 🔄 Conversión de Tasas de Interés")
     tab1, tab2, tab3 = st.tabs(
         ["Nominal ↔ Efectiva", "Tasa Equivalente", "Tabla Comparativa"]
     )
 
     with tab1:
-        st.subheader("Conversión Nominal ↔ Efectiva Anual")
         col1, col2 = st.columns(2)
 
         with col1:
@@ -475,7 +463,6 @@ elif modulo == "🔄 Conversión de Tasas":
         result_box("Comprobación anual", f"{((1+tasa_equiv)**n_destino - 1)*100:.4f}%")
 
     with tab3:
-        st.subheader("Tabla Comparativa de Tasas Equivalentes")
         tasa_anual_comp = st.number_input("Tasa Efectiva Anual (%)", min_value=0.01, value=20.0, step=0.5) / 100
         rows = []
         for nombre, m in PERIODOS_NOMBRES.items():
@@ -495,11 +482,10 @@ elif modulo == "🔄 Conversión de Tasas":
 # ─────────────────────────────────────────────
 
 elif modulo == "📈 Interés Simple":
-    st.title("📈 Interés Simple")
+    st.markdown("### 📈 Interés Simple")
     tab1, tab2 = st.tabs(["Calculadora", "Tabla de Capitalización"])
 
     with tab1:
-        st.subheader("Calcular variable desconocida")
         incognita = st.selectbox(
             "Variable a calcular",
             ["Monto Final (VF)", "Capital Inicial (VP)", "Tasa de Interés (i)", "Tiempo (t)"],
@@ -569,11 +555,10 @@ elif modulo == "📈 Interés Simple":
 # ─────────────────────────────────────────────
 
 elif modulo == "📊 Interés Compuesto":
-    st.title("📊 Interés Compuesto")
+    st.markdown("### 📊 Interés Compuesto")
     tab1, tab2 = st.tabs(["Calculadora", "Tabla y Gráfica"])
 
     with tab1:
-        st.subheader("Calcular variable desconocida")
         incognita = st.selectbox(
             "Variable a calcular",
             ["Valor Futuro (VF)", "Valor Presente (VP)", "Tasa de Interés (i)", "Tiempo (n)"],
@@ -647,7 +632,7 @@ elif modulo == "📊 Interés Compuesto":
 # ─────────────────────────────────────────────
 
 elif modulo == "💳 Anualidades":
-    st.title("💳 Anualidades")
+    st.markdown("### 💳 Anualidades")
     tipo_anualidad = st.radio("Tipo de anualidad", ["Vencida (Ordinaria)", "Anticipada"], horizontal=True)
     tab1, tab2, tab3 = st.tabs(["Valor Presente", "Valor Futuro", "Cuota"])
 
@@ -655,7 +640,6 @@ elif modulo == "💳 Anualidades":
 
     if tipo_anualidad == "Vencida (Ordinaria)":
         with tab1:
-            st.subheader("Valor Presente de Anualidad Vencida")
             c1, c2 = st.columns(2)
             with c1:
                 cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="av_vp_c")
@@ -668,7 +652,6 @@ elif modulo == "💳 Anualidades":
                 result_box("Total intereses", fmt_currency(cuota * n - vp, moneda))
 
         with tab2:
-            st.subheader("Valor Futuro de Anualidad Vencida")
             c1, c2 = st.columns(2)
             with c1:
                 cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="av_vf_c")
@@ -681,7 +664,6 @@ elif modulo == "💳 Anualidades":
                 result_box("Rendimiento total", fmt_currency(vf - cuota * n, moneda))
 
         with tab3:
-            st.subheader("Cuota de Anualidad Vencida")
             c1, c2 = st.columns(2)
             with c1:
                 base = st.radio("Calcular cuota desde", ["Valor Presente (VP)", "Valor Futuro (VF)"], key="av_cuota_base")
@@ -703,7 +685,6 @@ elif modulo == "💳 Anualidades":
 
     else:  # Anticipada
         with tab1:
-            st.subheader("Valor Presente de Anualidad Anticipada")
             c1, c2 = st.columns(2)
             with c1:
                 cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="aa_vp_c")
@@ -716,7 +697,6 @@ elif modulo == "💳 Anualidades":
                 result_box("Total intereses", fmt_currency(cuota * n - vp, moneda))
 
         with tab2:
-            st.subheader("Valor Futuro de Anualidad Anticipada")
             c1, c2 = st.columns(2)
             with c1:
                 cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="aa_vf_c")
@@ -729,7 +709,6 @@ elif modulo == "💳 Anualidades":
                 result_box("Rendimiento", fmt_currency(vf - cuota * n, moneda))
 
         with tab3:
-            st.subheader("Cuota de Anualidad Anticipada")
             c1, c2 = st.columns(2)
             with c1:
                 vp = money_input("Valor Presente (VP)", moneda, min_value=0.0, value=10_000.0, step=100.0, key="aa_cuota_vp")
@@ -747,14 +726,13 @@ elif modulo == "💳 Anualidades":
 # ─────────────────────────────────────────────
 
 elif modulo == "📐 Gradientes":
-    st.title("📐 Gradientes")
+    st.markdown("### 📐 Gradientes")
     tipo_grad = st.radio("Tipo de gradiente", ["Aritmético", "Geométrico"], horizontal=True)
 
     col1, col2 = st.columns(2)
 
     if tipo_grad == "Aritmético":
-        st.subheader("Gradiente Aritmético")
-        st.markdown("Las cuotas aumentan (o disminuyen) en un valor constante **G** cada período.")
+        st.caption("Las cuotas aumentan o disminuyen en un valor constante G cada período.")
 
         with col1:
             cuota1 = money_input("Primera cuota (A₁)", moneda, min_value=0.0, value=1_000.0, step=100.0, key="ga_c1")
@@ -770,7 +748,7 @@ elif modulo == "📐 Gradientes":
             result_box("Cuota equivalente uniforme", fmt_currency(anualidad_cuota_ordinaria(vp, tasa, n), moneda))
 
         df = tabla_gradiente(cuota1, g, n, "aritmetico")
-        st.subheader("Flujo de Cuotas")
+        st.markdown("**Flujo de Cuotas**")
         col_a, col_b = st.columns([2, 3])
         with col_a:
             st.dataframe(fmt_df(df), use_container_width=True, hide_index=True)
@@ -780,8 +758,7 @@ elif modulo == "📐 Gradientes":
             st.plotly_chart(fig, use_container_width=True)
 
     else:  # Geométrico
-        st.subheader("Gradiente Geométrico")
-        st.markdown("Las cuotas crecen en una tasa porcentual constante **g** cada período.")
+        st.caption("Las cuotas crecen en una tasa porcentual constante g cada período.")
 
         with col1:
             cuota1 = money_input("Primera cuota (A₁)", moneda, min_value=0.0, value=1_000.0, step=100.0, key="gg_c1")
@@ -796,7 +773,7 @@ elif modulo == "📐 Gradientes":
             metric_card("Valor Futuro (VF)", fmt_currency(vf, moneda))
 
         df = tabla_gradiente(cuota1, g, n, "geometrico")
-        st.subheader("Flujo de Cuotas")
+        st.markdown("**Flujo de Cuotas**")
         col_a, col_b = st.columns([2, 3])
         with col_a:
             st.dataframe(fmt_df(df), use_container_width=True, hide_index=True)
@@ -811,7 +788,7 @@ elif modulo == "📐 Gradientes":
 # ─────────────────────────────────────────────
 
 elif modulo == "🏦 Amortización":
-    st.title("🏦 Tabla de Amortización")
+    st.markdown("### 🏦 Tabla de Amortización")
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -886,9 +863,7 @@ elif modulo == "🏦 Amortización":
 # ─────────────────────────────────────────────
 
 elif modulo == "📉 VPN / TIR":
-    st.title("📉 VPN / TIR — Evaluación de Proyectos")
-
-    st.subheader("Ingresa los Flujos de Caja")
+    st.markdown("### 📉 VPN / TIR — Evaluación de Proyectos")
     col1, col2 = st.columns([1, 2])
 
     with col1:
