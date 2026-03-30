@@ -112,6 +112,14 @@ def fmt_df(df: pd.DataFrame) -> pd.DataFrame:
     return df2
 
 
+def money_input(label, moneda_sym="$", container=None, **kwargs):
+    """number_input monetario con caption en formato colombiano."""
+    ctx = container if container is not None else st
+    val = ctx.number_input(label, **kwargs)
+    ctx.caption(fmt_currency(val, moneda_sym))
+    return val
+
+
 PERIODOS_NOMBRES = {
     "Anual": 1,
     "Semestral": 2,
@@ -374,15 +382,17 @@ if modulo == "💰 Plan de Ahorro":
 
         if tipo_meta == "Cuota necesaria para una meta":
             col_m1, col_m2 = st.columns(2)
-            meta_val = col_m1.number_input(
-                "Meta de ahorro", min_value=1.0, value=100_000_000.0, step=1_000_000.0
-            )
+            with col_m1:
+                meta_val = money_input(
+                    "Meta de ahorro", moneda, min_value=1.0, value=100_000_000.0, step=1_000_000.0
+                )
             meta_plazo = col_m2.number_input(
                 "En cuántos períodos", min_value=1, value=plazo_meses, step=1
             )
-            meta_inicial = col_m2.number_input(
-                "Ahorro inicial", min_value=0.0, value=ahorro_inicial, step=100_000.0, key="meta_ini"
-            )
+            with col_m2:
+                meta_inicial = money_input(
+                    "Ahorro inicial", moneda, min_value=0.0, value=ahorro_inicial, step=100_000.0, key="meta_ini"
+                )
             cuota_necesaria = plan_ahorro_cuota_para_meta(meta_val, meta_inicial, tasa_periodica, meta_plazo)
             metric_card("Cuota periódica necesaria", fmt_currency(cuota_necesaria, moneda))
             result_box("Total a aportar", fmt_currency(cuota_necesaria * meta_plazo + meta_inicial, moneda))
@@ -390,16 +400,18 @@ if modulo == "💰 Plan de Ahorro":
 
         else:
             col_m1, col_m2 = st.columns(2)
-            meta_val2 = col_m1.number_input(
-                "Meta de ahorro", min_value=1.0, value=100_000_000.0, step=1_000_000.0, key="meta_val2"
-            )
-            cuota_meta = col_m2.number_input(
-                "Cuota periódica que puedes aportar",
-                min_value=1.0, value=cuota_ahorro, step=10_000.0, key="cuota_meta"
-            )
-            meta_inicial2 = col_m2.number_input(
-                "Ahorro inicial", min_value=0.0, value=ahorro_inicial, step=100_000.0, key="meta_ini2"
-            )
+            with col_m1:
+                meta_val2 = money_input(
+                    "Meta de ahorro", moneda, min_value=1.0, value=100_000_000.0, step=1_000_000.0, key="meta_val2"
+                )
+            with col_m2:
+                cuota_meta = money_input(
+                    "Cuota periódica que puedes aportar",
+                    moneda, min_value=1.0, value=cuota_ahorro, step=10_000.0, key="cuota_meta"
+                )
+                meta_inicial2 = money_input(
+                    "Ahorro inicial", moneda, min_value=0.0, value=ahorro_inicial, step=100_000.0, key="meta_ini2"
+                )
             periodos_necesarios = plan_ahorro_meses_para_meta(meta_val2, meta_inicial2, cuota_meta, tasa_periodica)
             if periodos_necesarios:
                 anios_nec = periodos_necesarios // m
@@ -496,7 +508,7 @@ elif modulo == "📈 Interés Simple":
 
         if incognita == "Monto Final (VF)":
             with col1:
-                c = st.number_input("Capital Inicial (VP)", min_value=0.0, value=10_000.0, step=100.0)
+                c = money_input("Capital Inicial (VP)", moneda, min_value=0.0, value=10_000.0, step=100.0)
                 i = st.number_input("Tasa de interés por período (%)", min_value=0.0, value=2.0, step=0.1) / 100
                 t = st.number_input("Tiempo (períodos)", min_value=0.0, value=12.0, step=1.0)
             with col2:
@@ -508,7 +520,7 @@ elif modulo == "📈 Interés Simple":
 
         elif incognita == "Capital Inicial (VP)":
             with col1:
-                vf = st.number_input("Monto Final (VF)", min_value=0.0, value=12_400.0, step=100.0)
+                vf = money_input("Monto Final (VF)", moneda, min_value=0.0, value=12_400.0, step=100.0)
                 i = st.number_input("Tasa de interés por período (%)", min_value=0.0, value=2.0, step=0.1) / 100
                 t = st.number_input("Tiempo (períodos)", min_value=0.0, value=12.0, step=1.0)
             with col2:
@@ -518,8 +530,8 @@ elif modulo == "📈 Interés Simple":
 
         elif incognita == "Tasa de Interés (i)":
             with col1:
-                c = st.number_input("Capital Inicial (VP)", min_value=0.01, value=10_000.0, step=100.0)
-                vf = st.number_input("Monto Final (VF)", min_value=0.01, value=12_400.0, step=100.0)
+                c = money_input("Capital Inicial (VP)", moneda, min_value=0.01, value=10_000.0, step=100.0)
+                vf = money_input("Monto Final (VF)", moneda, min_value=0.01, value=12_400.0, step=100.0)
                 t = st.number_input("Tiempo (períodos)", min_value=0.01, value=12.0, step=1.0)
             with col2:
                 i = interes_simple_tasa(c, vf, t)
@@ -528,8 +540,8 @@ elif modulo == "📈 Interés Simple":
 
         else:  # Tiempo
             with col1:
-                c = st.number_input("Capital Inicial (VP)", min_value=0.01, value=10_000.0, step=100.0)
-                vf = st.number_input("Monto Final (VF)", min_value=0.01, value=12_400.0, step=100.0)
+                c = money_input("Capital Inicial (VP)", moneda, min_value=0.01, value=10_000.0, step=100.0)
+                vf = money_input("Monto Final (VF)", moneda, min_value=0.01, value=12_400.0, step=100.0)
                 i = st.number_input("Tasa de interés por período (%)", min_value=0.0001, value=2.0, step=0.1) / 100
             with col2:
                 t = interes_simple_tiempo(c, vf, i)
@@ -538,7 +550,8 @@ elif modulo == "📈 Interés Simple":
     with tab2:
         st.subheader("Tabla de Capitalización Simple")
         col1, col2, col3 = st.columns(3)
-        c_t = col1.number_input("Capital (VP)", min_value=0.0, value=10_000.0, step=100.0, key="is_c")
+        with col1:
+            c_t = money_input("Capital (VP)", moneda, min_value=0.0, value=10_000.0, step=100.0, key="is_c")
         i_t = col2.number_input("Tasa por período (%)", min_value=0.0, value=2.0, step=0.1, key="is_i") / 100
         n_t = col3.number_input("Número de períodos", min_value=1, value=12, step=1, key="is_n")
 
@@ -569,7 +582,7 @@ elif modulo == "📊 Interés Compuesto":
 
         if incognita == "Valor Futuro (VF)":
             with col1:
-                vp = st.number_input("Valor Presente (VP)", min_value=0.0, value=10_000.0, step=100.0)
+                vp = money_input("Valor Presente (VP)", moneda, min_value=0.0, value=10_000.0, step=100.0)
                 i = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=2.0, step=0.1) / 100
                 n = st.number_input("Número de períodos (n)", min_value=0.0, value=12.0, step=1.0)
             with col2:
@@ -580,7 +593,7 @@ elif modulo == "📊 Interés Compuesto":
 
         elif incognita == "Valor Presente (VP)":
             with col1:
-                vf = st.number_input("Valor Futuro (VF)", min_value=0.0, value=12_682.0, step=100.0)
+                vf = money_input("Valor Futuro (VF)", moneda, min_value=0.0, value=12_682.0, step=100.0)
                 i = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=2.0, step=0.1) / 100
                 n = st.number_input("Número de períodos (n)", min_value=0.0, value=12.0, step=1.0)
             with col2:
@@ -590,8 +603,8 @@ elif modulo == "📊 Interés Compuesto":
 
         elif incognita == "Tasa de Interés (i)":
             with col1:
-                vp = st.number_input("Valor Presente (VP)", min_value=0.01, value=10_000.0, step=100.0)
-                vf = st.number_input("Valor Futuro (VF)", min_value=0.01, value=12_682.0, step=100.0)
+                vp = money_input("Valor Presente (VP)", moneda, min_value=0.01, value=10_000.0, step=100.0)
+                vf = money_input("Valor Futuro (VF)", moneda, min_value=0.01, value=12_682.0, step=100.0)
                 n = st.number_input("Número de períodos (n)", min_value=0.01, value=12.0, step=1.0)
             with col2:
                 i = interes_compuesto_tasa(vp, vf, n)
@@ -599,8 +612,8 @@ elif modulo == "📊 Interés Compuesto":
 
         else:
             with col1:
-                vp = st.number_input("Valor Presente (VP)", min_value=0.01, value=10_000.0, step=100.0)
-                vf = st.number_input("Valor Futuro (VF)", min_value=0.01, value=12_682.0, step=100.0)
+                vp = money_input("Valor Presente (VP)", moneda, min_value=0.01, value=10_000.0, step=100.0)
+                vf = money_input("Valor Futuro (VF)", moneda, min_value=0.01, value=12_682.0, step=100.0)
                 i = st.number_input("Tasa efectiva por período (%)", min_value=0.0001, value=2.0, step=0.1) / 100
             with col2:
                 n = interes_compuesto_tiempo(vp, vf, i)
@@ -609,7 +622,8 @@ elif modulo == "📊 Interés Compuesto":
     with tab2:
         st.subheader("Tabla de Capitalización Compuesta")
         col1, col2, col3 = st.columns(3)
-        c_t = col1.number_input("Capital (VP)", min_value=0.0, value=10_000.0, step=100.0, key="ic_c")
+        with col1:
+            c_t = money_input("Capital (VP)", moneda, min_value=0.0, value=10_000.0, step=100.0, key="ic_c")
         i_t = col2.number_input("Tasa por período (%)", min_value=0.0, value=2.0, step=0.1, key="ic_i") / 100
         n_t = col3.number_input("Número de períodos", min_value=1, value=12, step=1, key="ic_n")
 
@@ -644,7 +658,7 @@ elif modulo == "💳 Anualidades":
             st.subheader("Valor Presente de Anualidad Vencida")
             c1, c2 = st.columns(2)
             with c1:
-                cuota = st.number_input("Cuota periódica", min_value=0.0, value=500.0, step=50.0, key="av_vp_c")
+                cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="av_vp_c")
                 tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=1.5, step=0.1, key="av_vp_i") / 100
                 n = st.number_input("Número de períodos", min_value=1, value=24, step=1, key="av_vp_n")
             with c2:
@@ -657,7 +671,7 @@ elif modulo == "💳 Anualidades":
             st.subheader("Valor Futuro de Anualidad Vencida")
             c1, c2 = st.columns(2)
             with c1:
-                cuota = st.number_input("Cuota periódica", min_value=0.0, value=500.0, step=50.0, key="av_vf_c")
+                cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="av_vf_c")
                 tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=1.5, step=0.1, key="av_vf_i") / 100
                 n = st.number_input("Número de períodos", min_value=1, value=24, step=1, key="av_vf_n")
             with c2:
@@ -671,7 +685,7 @@ elif modulo == "💳 Anualidades":
             c1, c2 = st.columns(2)
             with c1:
                 base = st.radio("Calcular cuota desde", ["Valor Presente (VP)", "Valor Futuro (VF)"], key="av_cuota_base")
-                val = st.number_input("Valor", min_value=0.0, value=10_000.0, step=100.0, key="av_cuota_val")
+                val = money_input("Valor", moneda, min_value=0.0, value=10_000.0, step=100.0, key="av_cuota_val")
                 tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=1.5, step=0.1, key="av_cuota_i") / 100
                 n = st.number_input("Número de períodos", min_value=1, value=24, step=1, key="av_cuota_n")
             with c2:
@@ -692,7 +706,7 @@ elif modulo == "💳 Anualidades":
             st.subheader("Valor Presente de Anualidad Anticipada")
             c1, c2 = st.columns(2)
             with c1:
-                cuota = st.number_input("Cuota periódica", min_value=0.0, value=500.0, step=50.0, key="aa_vp_c")
+                cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="aa_vp_c")
                 tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=1.5, step=0.1, key="aa_vp_i") / 100
                 n = st.number_input("Número de períodos", min_value=1, value=24, step=1, key="aa_vp_n")
             with c2:
@@ -705,7 +719,7 @@ elif modulo == "💳 Anualidades":
             st.subheader("Valor Futuro de Anualidad Anticipada")
             c1, c2 = st.columns(2)
             with c1:
-                cuota = st.number_input("Cuota periódica", min_value=0.0, value=500.0, step=50.0, key="aa_vf_c")
+                cuota = money_input("Cuota periódica", moneda, min_value=0.0, value=500.0, step=50.0, key="aa_vf_c")
                 tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=1.5, step=0.1, key="aa_vf_i") / 100
                 n = st.number_input("Número de períodos", min_value=1, value=24, step=1, key="aa_vf_n")
             with c2:
@@ -718,7 +732,7 @@ elif modulo == "💳 Anualidades":
             st.subheader("Cuota de Anualidad Anticipada")
             c1, c2 = st.columns(2)
             with c1:
-                vp = st.number_input("Valor Presente (VP)", min_value=0.0, value=10_000.0, step=100.0, key="aa_cuota_vp")
+                vp = money_input("Valor Presente (VP)", moneda, min_value=0.0, value=10_000.0, step=100.0, key="aa_cuota_vp")
                 tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=1.5, step=0.1, key="aa_cuota_i") / 100
                 n = st.number_input("Número de períodos", min_value=1, value=24, step=1, key="aa_cuota_n")
             with c2:
@@ -743,8 +757,8 @@ elif modulo == "📐 Gradientes":
         st.markdown("Las cuotas aumentan (o disminuyen) en un valor constante **G** cada período.")
 
         with col1:
-            cuota1 = st.number_input("Primera cuota (A₁)", min_value=0.0, value=1_000.0, step=100.0, key="ga_c1")
-            g = st.number_input("Gradiente (G)", value=100.0, step=50.0, key="ga_g")
+            cuota1 = money_input("Primera cuota (A₁)", moneda, min_value=0.0, value=1_000.0, step=100.0, key="ga_c1")
+            g = money_input("Gradiente (G)", moneda, value=100.0, step=50.0, key="ga_g")
             tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=2.0, step=0.1, key="ga_i") / 100
             n = st.number_input("Número de períodos", min_value=1, value=12, step=1, key="ga_n")
 
@@ -770,7 +784,7 @@ elif modulo == "📐 Gradientes":
         st.markdown("Las cuotas crecen en una tasa porcentual constante **g** cada período.")
 
         with col1:
-            cuota1 = st.number_input("Primera cuota (A₁)", min_value=0.0, value=1_000.0, step=100.0, key="gg_c1")
+            cuota1 = money_input("Primera cuota (A₁)", moneda, min_value=0.0, value=1_000.0, step=100.0, key="gg_c1")
             g = st.number_input("Tasa de crecimiento del gradiente (%)", value=3.0, step=0.5, key="gg_g") / 100
             tasa = st.number_input("Tasa efectiva por período (%)", min_value=0.0, value=2.0, step=0.1, key="gg_i") / 100
             n = st.number_input("Número de períodos", min_value=1, value=12, step=1, key="gg_n")
@@ -800,7 +814,8 @@ elif modulo == "🏦 Amortización":
     st.title("🏦 Tabla de Amortización")
 
     col1, col2, col3, col4 = st.columns(4)
-    capital = col1.number_input("Capital del crédito", min_value=100.0, value=50_000_000.0, step=1_000_000.0)
+    with col1:
+        capital = money_input("Capital del crédito", moneda, min_value=100.0, value=50_000_000.0, step=1_000_000.0)
     tasa_pct = col2.number_input("Tasa efectiva por período (%)", min_value=0.001, value=1.5, step=0.1)
     n_periodos = col3.number_input("Número de cuotas", min_value=1, value=36, step=1)
     sistema = col4.selectbox("Sistema", ["Francés (Cuota constante)", "Alemán (Capital constante)", "Americano (Bullet)"])
@@ -877,14 +892,14 @@ elif modulo == "📉 VPN / TIR":
     col1, col2 = st.columns([1, 2])
 
     with col1:
-        inversion = st.number_input("Inversión inicial (período 0)", min_value=0.0, value=10_000_000.0, step=100_000.0)
+        inversion = money_input("Inversión inicial (período 0)", moneda, min_value=0.0, value=10_000_000.0, step=100_000.0)
         n_flujos = st.number_input("Número de períodos de flujo", min_value=1, value=5, step=1, max_value=30)
         tasa_desc = st.number_input("Tasa de descuento (%)", min_value=0.0, value=10.0, step=0.5) / 100
 
         st.markdown("#### Flujos de Caja (períodos 1 a n)")
         flujos_entrada = []
         for i in range(1, n_flujos + 1):
-            f = st.number_input(f"Flujo período {i}", value=3_000_000.0, step=100_000.0, key=f"flujo_{i}")
+            f = money_input(f"Flujo período {i}", moneda, value=3_000_000.0, step=100_000.0, key=f"flujo_{i}")
             flujos_entrada.append(f)
 
     flujos_completos = [-inversion] + flujos_entrada
