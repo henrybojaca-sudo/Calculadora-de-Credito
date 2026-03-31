@@ -815,7 +815,7 @@ elif modulo == "🏦 Amortización":
             st.info(f"**Cuota fija:** {fmt_currency(cuota_display, moneda)}")
         st.dataframe(fmt_df(df), use_container_width=True, hide_index=True)
 
-        csv = df.to_csv(index=False).encode("utf-8")
+        csv = df.to_csv(index=False).encode("utf-8-sig")
         st.download_button("⬇️ Descargar CSV", csv, "amortizacion.csv", "text/csv")
 
     with tab_grafica:
