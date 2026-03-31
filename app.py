@@ -3,6 +3,7 @@ Calculadora de Crédito e Inversión
 Matemática Financiera — Streamlit App
 """
 
+import io
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -815,8 +816,11 @@ elif modulo == "🏦 Amortización":
             st.info(f"**Cuota fija:** {fmt_currency(cuota_display, moneda)}")
         st.dataframe(fmt_df(df), use_container_width=True, hide_index=True)
 
-        csv = df.to_csv(index=False).encode("cp1252")
-        st.download_button("⬇️ Descargar CSV", csv, "amortizacion.csv", "text/csv; charset=cp1252")
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False, engine="openpyxl")
+        buf.seek(0)
+        st.download_button("⬇️ Descargar Excel", buf.getvalue(), "amortizacion.xlsx",
+                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     with tab_grafica:
         df_num = df[df["Período"] != "TOTAL"].copy()
